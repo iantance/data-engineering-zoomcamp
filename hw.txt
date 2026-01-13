@@ -1,0 +1,72 @@
+Q3:
+select COUNT(*) from green_taxi_trips WHERE trip_distance <= 1 AND lpep_pickup_datetime >= '2025-11-01' and lpep_pickup_datetime < '2025-12-01';
+
+8007
+
+
+Q4:
+SELECT
+    CAST(lpep_dropoff_datetime AS DATE) as "day",
+    COUNT(1) AS "count",
+    MAX(trip_distance) AS "distance"
+FROM
+    green_taxi_trips
+WHERE
+	trip_distance < 100
+GROUP BY
+    CAST(lpep_dropoff_datetime AS DATE)
+ORDER BY
+    "distance" DESC
+LIMIT 100;
+
+"2025-11-14"	1726	88.03
+"2025-11-20"	1925	73.84
+"2025-11-23"	1299	45.26
+"2025-11-22"	1328	40.16
+"2025-11-15"	1425	39.81
+
+Q5:
+
+SELECT
+    "LocationID",
+	CONCAT(zpu."Borough", ' | ', zpu."Zone") AS "Location",
+    SUM(total_amount) AS "total_amount"
+FROM
+    green_taxi_trips t,
+	green_taxi_zones zpu
+WHERE
+    t."PULocationID" = zpu."LocationID"
+AND
+    CAST(t.lpep_dropoff_datetime AS DATE) = '11-18-2025'
+GROUP BY
+    "LocationID",
+	"Location"
+ORDER BY
+    "total_amount" DESC
+LIMIT 100;
+
+74	"Manhattan | East Harlem North"	9305.259999999997
+75	"Manhattan | East Harlem South"	6676.730000000007
+43	"Manhattan | Central Park"	2456.34
+244	"Manhattan | Washington Heights South"	2139.0499999999997
+166	"Manhattan | Morningside Heights"	2100.590000000001
+130	"Queens | Jamaica"	2007.6100000000001
+
+Q6:
+SELECT
+    zpu."Zone" AS "Pickup Zone",
+    zpo."Zone" AS "Drop Off Zone",
+    MAX(t.tip_amount) AS max_tip
+FROM green_taxi_trips t
+JOIN green_taxi_zones zpu ON t."PULocationID" = zpu."LocationID"
+JOIN green_taxi_zones zpo ON t."DOLocationID" = zpo."LocationID"
+WHERE zpu."Zone" = 'East Harlem North'
+GROUP BY 1, 2
+ORDER BY max_tip DESC
+LIMIT 100;
+
+"East Harlem North"	"Yorkville West"	81.89
+"East Harlem North"	"LaGuardia Airport"	50
+"East Harlem North"	"East Harlem North"	45
+"East Harlem North"	"Long Island City/Queens Plaza"	34.25
+"East Harlem North"		28.9
