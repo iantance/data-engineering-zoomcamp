@@ -4,6 +4,7 @@
 
 import click
 import pandas as pd
+import pyarrow.parquet as pq
 from sqlalchemy import create_engine
 from tqdm.auto import tqdm
 
@@ -31,6 +32,13 @@ parse_dates = [
     "tpep_dropoff_datetime"
 ]
 
+csv_dtype = {
+    "LocationID": "Int64",
+    "Borough": "string",
+    "Zone": "string",
+    "service_zone": "string"
+}
+
 
 @click.command()
 @click.option('--pg-user', default='root', help='PostgreSQL user')
@@ -44,22 +52,28 @@ parse_dates = [
 @click.option('--chunksize', default=100000, type=int, help='Chunk size for reading CSV')
 def run(pg_user, pg_pass, pg_host, pg_port, pg_db, year, month, target_table, chunksize):
     """Ingest NYC taxi data into PostgreSQL database."""
-    prefix = 'https://github.com/DataTalksClub/nyc-tlc-data/releases/download/yellow'
-    url = f'{prefix}/yellow_tripdata_{year}-{month:02d}.csv.gz'
+    # prefix = 'https://github.com/DataTalksClub/nyc-tlc-data/releases/download/yellow'
+    # url = f'{prefix}/yellow_tripdata_{year}-{month:02d}.csv.gz'
+    url = f'/app/green_tripdata_2025-11.parquet'
 
     engine = create_engine(f'postgresql://{pg_user}:{pg_pass}@{pg_host}:{pg_port}/{pg_db}')
 
-    df_iter = pd.read_csv(
-        url,
-        dtype=dtype,
-        parse_dates=parse_dates,
-        iterator=True,
-        chunksize=chunksize,
-    )
+    # df_iter = pd.read_csv(
+    #     url,
+    #     dtype=csv_dtype,
+    #     # parse_dates=parse_dates,
+    #     iterator=True,
+    #     chunksize=chunksize,
+    # )
+    parquet_file = pq.ParquetFile(url)
+    df_iter = parquet_file.iter_batches(batch_size=chunksize)
 
     first = True
 
-    for df_chunk in tqdm(df_iter):
+    # for df_chunk in tqdm(df_iter):
+    for batch in tqdm(df_iter, total=parquet_file.num_row_groups):
+        df_chunk = batch.to_pandas()
+        df_chunk = df_chunk.astype(dtype)
         if first:
             df_chunk.head(0).to_sql(
                 name=target_table,
